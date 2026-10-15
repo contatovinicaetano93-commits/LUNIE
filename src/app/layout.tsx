@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Bodoni_Moda, Geist, Geist_Mono } from "next/font/google";
 
 import { AppShell } from "@/components/app-shell";
+import { LunieMark } from "@/components/lunie-mark";
 import { getWorkspace } from "@/lib/catalog";
 
 import "./globals.css";
@@ -37,7 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} ${bodoni.variable} dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${bodoni.variable} h-full`}
     >
       <body className="min-h-full bg-background text-foreground">
         <Suspense fallback={<BootScreen />}>
@@ -56,7 +57,7 @@ async function Shell({ children }: { children: ReactNode }) {
 function BootScreen() {
   return (
     <div className="px-6 py-10">
-      <p className="font-display text-4xl tracking-[0.32em] text-primary">LUNIE</p>
+      <LunieMark />
       <p className="mt-3 text-sm text-muted-foreground">Abrindo a leitura...</p>
     </div>
   );

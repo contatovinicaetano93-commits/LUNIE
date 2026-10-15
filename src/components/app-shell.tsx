@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { LunieMark } from "@/components/lunie-mark";
 import { Badge } from "@/components/ui/badge";
 import { MovementDialog } from "@/components/movement-dialog";
 import { NavLinks } from "@/components/nav-links";
@@ -20,10 +21,8 @@ export function AppShell({
         <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-5 sm:px-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="font-display text-4xl tracking-[0.32em] text-primary sm:text-5xl">
-                LUNIE
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <LunieMark />
+              <p className="mt-2 text-sm font-medium text-foreground/80">
                 Estoque, saída e reposição
               </p>
             </div>

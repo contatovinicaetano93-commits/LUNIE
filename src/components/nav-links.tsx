@@ -25,10 +25,10 @@ export function NavLinks() {
             key={link.href}
             href={link.href}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-sm",
+              "shrink-0 rounded-full px-3 py-1.5 text-sm font-medium",
               active
                 ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                : "text-foreground/80 hover:bg-muted hover:text-foreground",
             )}
           >
             {link.label}

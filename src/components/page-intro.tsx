@@ -7,8 +7,8 @@ export function PageIntro({
 }) {
   return (
     <div className="mb-6">
-      <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{title}</h1>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+      <h1 className="font-display text-3xl tracking-tight text-foreground sm:text-4xl">{title}</h1>
+      <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-foreground/80">
         {description}
       </p>
     </div>

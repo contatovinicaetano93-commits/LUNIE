@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { getWorkspace } from "@/lib/catalog";
-import { readCredentials } from "@/lib/credentials";
 import { appendMovement } from "@/lib/store";
 import type { MovementKind } from "@/lib/types";
 
@@ -57,9 +56,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const credentials = readCredentials();
   await appendMovement({
-    scope: credentials.complete ? "live" : "demo",
+    scope: workspace.mode,
     barcode,
     kind,
     quantity,

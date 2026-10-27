@@ -1,12 +1,12 @@
 import { cache } from "react";
 import { connection } from "next/server";
 
-import { buildDemoSnapshot } from "@/lib/demo";
-import { readCredentials } from "@/lib/credentials";
-import { readStore } from "@/lib/store";
+import { readCredentials, type Credentials } from "@/lib/credentials";
+import { pullSnapshot } from "@/lib/sources/load";
+import { readStore, saveSnapshot } from "@/lib/store";
 import type { CatalogVariant, DataMode, ManualMovement, Snapshot } from "@/lib/types";
 
-export type WorkspaceStatus = "demo" | "live" | "awaiting-sync";
+export type WorkspaceStatus = "live" | "awaiting-sync";
 
 export type VariantOption = {
   barcode: string;
@@ -28,31 +28,50 @@ export const getWorkspace = cache(async function getWorkspace(): Promise<Workspa
   const store = await readStore();
   const now = new Date();
 
-  if (credentials.complete) {
-    const snapshot =
-      store.snapshot?.mode === "live" ? store.snapshot : emptyLiveSnapshot(now);
-    const notices = [
-      ...snapshot.warnings,
-      ...(store.snapshot?.mode === "live"
-        ? []
-        : [
-            "As chaves estão no ambiente. Sincronize para trazer produtos do Hiper e pedidos da Nuvemshop.",
-          ]),
-    ];
-    return assemble("live", snapshot.products.length === 0 && store.snapshot?.mode !== "live" ? "awaiting-sync" : "live", snapshot, store.movements, notices);
+  let live =
+    store.snapshot?.mode === "live" && store.snapshot.products.length > 0
+      ? store.snapshot
+      : null;
+  let pullError = "";
+  if (!live && (credentials.hiperReady || credentials.nuvemshopReady)) {
+    try {
+      const pulled = await pullAndStore(credentials, now);
+      if (pulled.products.length > 0) live = pulled;
+    } catch (error) {
+      pullError = error instanceof Error ? error.message : "Falha ao ler as fontes.";
+    }
   }
 
-  const snapshot = buildDemoSnapshot(now);
-  const notices = [
-    "Demonstração. Os números são uma amostra da operação LUNIE até a chave do Hiper e o token da Nuvemshop entrarem no ambiente.",
-  ];
-  if (credentials.missing.length > 0 && credentials.missing.length < 3) {
-    notices.push(
-      `Falta configurar ${credentials.missing.join(", ")}. Enquanto isso o painel continua na amostra.`,
-    );
+  if (live) {
+    return assemble("live", "live", live, store.movements, [...live.warnings]);
   }
-  return assemble("demo", "demo", snapshot, store.movements, notices);
+
+  const notices = waitingNotices(credentials);
+  if (pullError) notices.unshift(pullError);
+  return assemble(
+    "live",
+    "awaiting-sync",
+    emptyLiveSnapshot(now),
+    store.movements,
+    notices,
+  );
 });
+
+let livePull: Promise<Snapshot> | null = null;
+
+function pullAndStore(credentials: Credentials, now: Date): Promise<Snapshot> {
+  if (!livePull) {
+    livePull = pullSnapshot(credentials, now)
+      .then(async (snapshot) => {
+        await saveSnapshot(snapshot);
+        return snapshot;
+      })
+      .finally(() => {
+        livePull = null;
+      });
+  }
+  return livePull;
+}
 
 function assemble(
   mode: DataMode,
@@ -89,6 +108,27 @@ function optionsFrom(snapshot: Snapshot): VariantOption[] {
 
 function optionLabel(variant: CatalogVariant): string {
   return `${variant.productName} · ${variant.color} · ${variant.size} · ${variant.barcode}`;
+}
+
+function waitingNotices(credentials: Credentials): string[] {
+  if (credentials.hiperReady && credentials.nuvemshopReady) {
+    return [
+      "As chaves estão no ambiente. Sincronize para trazer produtos do Hiper e pedidos da Nuvemshop.",
+    ];
+  }
+  if (credentials.hiperReady) {
+    return [
+      "A chave do Hiper está no ambiente. Sincronize para trazer o catálogo. A Nuvemshop ainda precisa do access token da loja.",
+    ];
+  }
+  if (credentials.nuvemshopReady) {
+    return [
+      "O token da Nuvemshop está no ambiente. Falta a chave do Hiper. Sincronize para trazer os pedidos da loja.",
+    ];
+  }
+  return [
+    "Nenhuma fonte conectada. Coloque a chave do Hiper ou o access token da Nuvemshop e sincronize.",
+  ];
 }
 
 function emptyLiveSnapshot(now: Date): Snapshot {

@@ -1,5 +1,6 @@
 import type { Credentials } from "@/lib/credentials";
 import {
+  asArray,
   asRecord,
   asString,
   firstNumber,
@@ -8,8 +9,10 @@ import {
 } from "@/lib/json";
 import type { SourceVariant } from "@/lib/types";
 
-const PAGE_SIZE = 100;
 const MAX_PAGES = 40;
+
+const EMPTY_CATALOG =
+  "O Hiper autenticou, mas não encontrou produtos liberados para a loja virtual. No cadastro do produto, marque Enviar produto para a loja virtual.";
 
 export async function fetchHiperVariants(
   credentials: Credentials,
@@ -18,71 +21,95 @@ export async function fetchHiperVariants(
   if (!base.startsWith("https://")) {
     throw new Error("HIPER_API_BASE_URL precisa ser um endereço https.");
   }
-  const variants: SourceVariant[] = [];
+  const token = await gerarToken(base, credentials.hiperKey);
+  const rows = await listarProdutos(base, token);
+  const variants = rows.flatMap((row) => normalizeHiperProduct(row));
+  if (variants.length === 0) {
+    throw new Error(EMPTY_CATALOG);
+  }
+  return variants;
+}
+
+async function gerarToken(base: string, key: string): Promise<string> {
+  const response = await fetch(`${base}/api/v1/auth/gerar-token/${encodeURIComponent(key)}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(20000),
+  });
+  const payload = await readJson(response);
+  const token = asString(asRecord(payload)?.token);
+  if (!response.ok || !token) {
+    throw new Error(
+      "O Hiper recusou a chave de segurança. Ela fica em Vendas, Loja virtual, Configurações.",
+    );
+  }
+  return token;
+}
+
+async function listarProdutos(base: string, token: string): Promise<unknown[]> {
+  const collected: unknown[] = [];
   const seenPage = new Set<string>();
   for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const url = new URL(`${base}${credentials.hiperProductsPath}`);
+    const url = new URL(`${base}/api/v1/produtos/listagemDeProdutos`);
+    url.searchParams.set("pontoDeSincronizacao", "0");
     url.searchParams.set("pagina", String(page));
-    url.searchParams.set("page", String(page));
-    url.searchParams.set("limite", String(PAGE_SIZE));
-    const payload = await hiperGet(url, credentials.hiperKey);
+    const payload = await hiperGet(url, token);
+    const failure = failureMessage(payload);
+    if (failure) {
+      if (page === 1) throw new Error(failure);
+      break;
+    }
     const rows = extractRows(payload);
     if (rows.length === 0) break;
     const marker = JSON.stringify(rows[0]).slice(0, 180);
     if (seenPage.has(marker)) break;
     seenPage.add(marker);
-    for (const row of rows) {
-      variants.push(...normalizeHiperProduct(row));
-    }
-    if (rows.length < PAGE_SIZE) break;
+    collected.push(...rows);
   }
-  if (variants.length === 0) {
-    throw new Error(
-      "O Hiper respondeu sem produtos. Confira a chave, o caminho HIPER_PRODUCTS_PATH e se os itens estão marcados para a loja virtual.",
-    );
-  }
-  return variants;
+  return collected;
 }
 
-async function hiperGet(url: URL, key: string): Promise<unknown> {
-  const bearer = await request(url, {
-    Authorization: `Bearer ${key}`,
-    "X-Chave-Seguranca": key,
-    Accept: "application/json",
-  });
-  if (bearer.ok) return bearer.payload;
-  if (bearer.status === 401 || bearer.status === 403) {
-    const raw = await request(url, {
-      Authorization: key,
-      Accept: "application/json",
-    });
-    if (raw.ok) return raw.payload;
-    throw new Error(
-      `Hiper recusou a chave de segurança (${raw.status}). Ela fica em Vendas, Loja virtual, Configurações.`,
-    );
-  }
-  throw new Error(`Hiper respondeu ${bearer.status} em ${url.pathname}.`);
-}
-
-async function request(
-  url: URL,
-  headers: Record<string, string>,
-): Promise<{ ok: boolean; status: number; payload: unknown }> {
+async function hiperGet(url: URL, token: string): Promise<unknown> {
   const response = await fetch(url, {
-    headers,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
     cache: "no-store",
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(30000),
   });
-  const text = await response.text();
-  let payload: unknown = null;
-  if (text) {
-    try {
-      payload = JSON.parse(text) as unknown;
-    } catch {
-      payload = null;
-    }
+  const payload = await readJson(response);
+  if (response.status === 401 || response.status === 403) {
+    throw new Error(
+      "O Hiper recusou o token. A chave de segurança fica em Vendas, Loja virtual, Configurações.",
+    );
   }
-  return { ok: response.ok, status: response.status, payload };
+  if (!response.ok && response.status !== 400) {
+    throw new Error(`Hiper respondeu ${response.status} em ${url.pathname}.`);
+  }
+  return payload;
+}
+
+async function readJson(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function failureMessage(payload: unknown): string | null {
+  const record = asRecord(payload);
+  if (!record) return null;
+  if (asArray(record.produtos).length > 0) return null;
+  const errors = asArray(record.errors).map((item) => asString(item)).filter(Boolean);
+  if (errors.some((error) => error.toLowerCase().includes("nenhum produto"))) {
+    return EMPTY_CATALOG;
+  }
+  if (errors.length > 0) return errors.join(" ");
+  return null;
 }
 
 export function extractRows(payload: unknown): unknown[] {
@@ -124,7 +151,7 @@ export function normalizeHiperProduct(value: unknown): SourceVariant[] {
   }
   return grades.flatMap((grade, index) => {
     const gradeRecord = asRecord(grade);
-    if (!gradeRecord) return [];
+    if (!gradeRecord || gradeRecord.variacaoAtiva === false) return [];
     const variant = toVariant(gradeRecord, {
       productId,
       productName,
@@ -138,17 +165,48 @@ export function normalizeHiperProduct(value: unknown): SourceVariant[] {
 }
 
 function isActive(record: Record<string, unknown>): boolean {
-  const status = firstString(record, ["situacao", "status", "ativo"]).toLowerCase();
+  if (record.removido === true || record.ativo === false) return false;
+  const status = firstString(record, ["situacao", "status"]).toLowerCase();
   if (!status) return true;
   return !["inativo", "false", "0", "n", "nao", "não"].includes(status);
 }
 
 function gradeRows(record: Record<string, unknown>): unknown[] {
-  for (const key of ["variacoes", "grades", "grade", "itens", "sku"]) {
+  for (const key of ["variacao", "variacoes", "grades", "grade", "itens", "sku"]) {
     const value = record[key];
     if (Array.isArray(value) && value.length > 0) return value;
+    if (key === "variacao") {
+      const single = asRecord(value);
+      if (single) return [single];
+    }
   }
   return [];
+}
+
+function variationAxes(record: Record<string, unknown>): { size: string; color: string } {
+  const pairs: Array<[string, string]> = [
+    [firstString(record, ["tipoVariacaoA"]), firstString(record, ["nomeVariacaoA"])],
+    [firstString(record, ["tipoVariacaoB"]), firstString(record, ["nomeVariacaoB"])],
+  ];
+  let size = "";
+  let color = "";
+  const unused: string[] = [];
+  for (const [tipo, nome] of pairs) {
+    if (!nome) continue;
+    const kind = tipo.toLowerCase();
+    if (kind.includes("tamanh") || kind.includes("size") || kind === "tam") {
+      size = size || nome;
+    } else if (kind.includes("cor") || kind.includes("color")) {
+      color = color || nome;
+    } else {
+      unused.push(nome);
+    }
+  }
+  for (const nome of unused) {
+    if (!color) color = nome;
+    else if (!size) size = nome;
+  }
+  return { size, color };
 }
 
 function toVariant(
@@ -175,27 +233,42 @@ function toVariant(
     ]) || (fallback ? firstString(fallback, ["codigoDeBarras", "codigoBarras", "sku", "ean"]) : "");
   const stock =
     firstNumber(record, [
+      "quantidadeEmEstoque",
       "quantidadeEstoque",
       "estoqueAtual",
       "estoque",
       "saldo",
       "quantidade",
       "stock",
-    ]) ?? (fallback ? firstNumber(fallback, ["quantidadeEstoque", "estoque", "saldo"]) : null);
+    ]) ??
+    (fallback
+      ? firstNumber(fallback, ["quantidadeEmEstoque", "quantidadeEstoque", "estoque", "saldo"])
+      : null);
   const minStock =
-    firstNumber(record, ["quantidadeMinima", "estoqueMinimo", "estoque_minimo", "minimo"]) ??
-    (fallback ? firstNumber(fallback, ["quantidadeMinima", "estoqueMinimo"]) : null) ??
+    firstNumber(record, [
+      "quantidadeMinimaEmEstoque",
+      "quantidadeMinima",
+      "estoqueMinimo",
+      "estoque_minimo",
+      "minimo",
+    ]) ??
+    (fallback
+      ? firstNumber(fallback, ["quantidadeMinimaEmEstoque", "quantidadeMinima", "estoqueMinimo"])
+      : null) ??
     0;
   const price =
     firstNumber(record, ["preco", "precoVenda", "valor", "price"]) ??
     (fallback ? firstNumber(fallback, ["preco", "precoVenda", "valor"]) : null) ??
     0;
+  const axes = variationAxes(record);
   const size =
     firstString(record, ["tamanho", "size", "tam"]) ||
+    axes.size ||
     (fallback ? firstString(fallback, ["tamanho"]) : "") ||
     "—";
   const color =
     firstString(record, ["cor", "color"]) ||
+    axes.color ||
     (fallback ? firstString(fallback, ["cor"]) : "") ||
     "—";
   if (!barcode && stock === null && !context.productName) return null;

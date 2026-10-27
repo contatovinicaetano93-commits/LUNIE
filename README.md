@@ -2,7 +2,7 @@
 
 Painel interno de estoque e reposição. Lê produtos e saldo no Hiper, produtos e pedidos na Nuvemshop, e cruza os dois pelo código de barras.
 
-Sem as chaves, o painel abre com uma amostra da operação para a grade, as vendas e os alertas já poderem ser lidos. Com as chaves, a sincronização passa a usar as contas reais. O painel não grava saldo de volta no Hiper nem na Nuvemshop.
+O painel só mostra o que veio do Hiper ou da Nuvemshop. Sem uma leitura sincronizada, as telas ficam vazias. O painel não grava saldo de volta no Hiper nem na Nuvemshop.
 
 ## Rodar
 
@@ -18,11 +18,11 @@ O painel sobe em [http://127.0.0.1:43123](http://127.0.0.1:43123).
 Copie `.env.example` para `.env.local`. Não coloque senha de usuário em lugar nenhum.
 
 - **Hiper:** chave de segurança em Vendas, Loja virtual, Configurações, com a integração do tipo Personalizada. A conta precisa do Pacote do varejo digital, e o produto precisa estar marcado para a loja virtual.
-- **Nuvemshop:** `access_token` e `store_id` de um app instalado na loja, com os escopos `read_products` e `read_orders`.
+- **Nuvemshop:** `access_token` e `store_id` (`user_id`) devolvidos ao instalar o app na loja, com os escopos `read_products` e `read_orders`. O ID e o segredo do aplicativo só servem para trocar o código de instalação por esse token.
 
-O endereço do Hiper (`HIPER_API_BASE_URL` e `HIPER_PRODUCTS_PATH`) segue o formato assumido da API personalizada. Quando a documentação técnica trouxer o host e o caminho oficiais, ajuste essas duas variáveis. O leitor aceita os nomes de campo mais comuns (`nome`, `codigoDeBarras`, `estoque`, `tamanho`, `cor` e a grade aninhada).
+O Hiper usa a API personalizada em `https://ms-ecommerce.hiper.com.br`: a chave de segurança gera um token e a listagem sai de `/api/v1/produtos/listagemDeProdutos`. O leitor entende a grade oficial (`variacao`, `codigoDeBarras`, `quantidadeEmEstoque`, tamanho e cor).
 
-Enquanto faltar qualquer uma das três chaves (`HIPER_API_KEY`, `NUVEMSHOP_ACCESS_TOKEN`, `NUVEMSHOP_STORE_ID`), a leitura continua na demonstração.
+A sincronização aceita o Hiper, a Nuvemshop, ou os dois. Sem `HIPER_API_KEY` o saldo do ERP não entra. Sem `NUVEMSHOP_ACCESS_TOKEN` e `NUVEMSHOP_STORE_ID` os pedidos da loja não entram.
 
 ## O que a conta faz
 

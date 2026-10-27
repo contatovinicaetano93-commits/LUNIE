@@ -27,7 +27,7 @@ export function AppShell({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={workspace.status === "demo" ? "secondary" : "default"}>
+              <Badge variant={workspace.status === "live" ? "default" : "secondary"}>
                 {statusLabel(workspace.status)}
               </Badge>
               <span className="text-xs text-muted-foreground">
@@ -60,8 +60,6 @@ export function AppShell({
 
 function statusLabel(status: WorkspaceStatus): string {
   switch (status) {
-    case "demo":
-      return "Demonstração";
     case "live":
       return "Ao vivo";
     case "awaiting-sync":

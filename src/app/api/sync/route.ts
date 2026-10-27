@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const maxDuration = 60;
+
 import { readCredentials } from "@/lib/credentials";
 import { pullSnapshot } from "@/lib/sources/load";
 import { saveSnapshot } from "@/lib/store";

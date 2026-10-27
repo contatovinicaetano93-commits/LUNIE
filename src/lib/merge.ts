@@ -27,7 +27,7 @@ type MutableVariant = {
 };
 
 export function buildSnapshot(input: {
-  mode: "demo" | "live";
+  mode: "live";
   syncedAt: string;
   hiper: SourceVariant[];
   nuvemshop: SourceVariant[];
@@ -80,6 +80,7 @@ function absorb(
   warnings: string[],
 ): void {
   const seen = new Set<string>();
+  const repeated = new Map<SourceVariant["source"], number>();
   for (const row of rows) {
     const barcode = row.barcode.trim();
     if (!barcode) {
@@ -88,9 +89,7 @@ function absorb(
     }
     const duplicateKey = `${row.source}:${barcode}`;
     if (seen.has(duplicateKey)) {
-      warnings.push(
-        `Código ${barcode} repetido no ${sourceName(row.source)}. A primeira ocorrência foi mantida.`,
-      );
+      repeated.set(row.source, (repeated.get(row.source) ?? 0) + 1);
       continue;
     }
     seen.add(duplicateKey);
@@ -110,6 +109,11 @@ function absorb(
       continue;
     }
     applySource(current, row);
+  }
+  for (const [source, count] of repeated) {
+    warnings.push(
+      `${count} códigos repetidos no ${sourceName(source)}. Em cada um, a primeira ocorrência foi mantida.`,
+    );
   }
 }
 

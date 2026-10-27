@@ -2,11 +2,17 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { analyze, suggestedBuy } from "./analytics";
-import { DEMO_BARCODES, buildDemoSnapshot } from "./demo";
 import { mergeProducts } from "./merge";
 import { normalizeHiperProduct } from "./sources/hiper";
 import { normalizeNuvemshopOrder, paymentState } from "./sources/nuvemshop";
-import type { ManualMovement, SourceVariant } from "./types";
+import type {
+  ManualMovement,
+  PaymentState,
+  Product,
+  SaleLine,
+  Snapshot,
+  SourceVariant,
+} from "./types";
 
 const now = new Date("2026-10-14T15:00:00.000Z");
 
@@ -17,8 +23,11 @@ describe("reposição", () => {
     assert.equal(suggestedBuy(2, 30, 30, 10), 0);
   });
 
-  it("a amostra deixa o M do vestido curto e o GG parado", () => {
-    const snapshot = buildDemoSnapshot(now);
+  it("compra o que a velocidade pede além do saldo e marca a grade torta", () => {
+    const snapshot = stockSnapshot(now, [
+      { barcode: "100", size: "M", stock: 1, sold: 18, cancelled: 1 },
+      { barcode: "101", size: "GG", stock: 14, sold: 0 },
+    ]);
     const analysis = analyze({
       snapshot,
       movements: [],
@@ -26,35 +35,30 @@ describe("reposição", () => {
       coverTarget: 30,
       now,
     });
-    const vestidoM = analysis.variants.find(
-      (variant) => variant.barcode === DEMO_BARCODES.vestidoAreiaM,
-    );
-    const vestidoGg = analysis.variants.find(
-      (variant) => variant.barcode === DEMO_BARCODES.vestidoAreiaGg,
-    );
-    assert.ok(vestidoM);
-    assert.equal(vestidoM.unitsSold, 18);
-    assert.equal(vestidoM.suggested, 17);
-    assert.equal(vestidoM.atRisk, true);
-    assert.ok(vestidoGg);
-    assert.equal(vestidoGg.unitsSold, 0);
-    assert.equal(vestidoGg.planningStock, 14);
-    const grade = analysis.insights.find(
-      (insight) =>
-        insight.kind === "grade" && insight.title.includes("Vestido Linho Luna"),
-    );
+    const sizeM = analysis.variants.find((variant) => variant.barcode === "100");
+    const sizeGg = analysis.variants.find((variant) => variant.barcode === "101");
+    assert.ok(sizeM);
+    assert.equal(sizeM.unitsSold, 18);
+    assert.equal(sizeM.suggested, 17);
+    assert.equal(sizeM.atRisk, true);
+    assert.ok(sizeGg);
+    assert.equal(sizeGg.unitsSold, 0);
+    assert.equal(sizeGg.planningStock, 14);
+    const grade = analysis.insights.find((insight) => insight.kind === "grade");
     assert.ok(grade);
     assert.match(grade.detail, /M tem/);
     assert.match(grade.detail, /GG tem/);
   });
 
   it("uma entrada local reduz a compra sugerida", () => {
-    const snapshot = buildDemoSnapshot(now);
+    const snapshot = stockSnapshot(now, [
+      { barcode: "100", size: "M", stock: 1, sold: 18 },
+    ]);
     const movement: ManualMovement = {
       id: "entrada-1",
-      scope: "demo",
+      scope: "live",
       createdAt: now.toISOString(),
-      barcode: DEMO_BARCODES.vestidoAreiaM,
+      barcode: "100",
       kind: "entrada",
       quantity: 10,
       note: "Recebimento",
@@ -66,19 +70,18 @@ describe("reposição", () => {
       coverTarget: 30,
       now,
     });
-    const vestidoM = analysis.variants.find(
-      (variant) => variant.barcode === DEMO_BARCODES.vestidoAreiaM,
-    );
-    assert.ok(vestidoM);
-    assert.equal(vestidoM.planningStock, 11);
-    assert.equal(vestidoM.suggested, 7);
+    const sizeM = analysis.variants.find((variant) => variant.barcode === "100");
+    assert.ok(sizeM);
+    assert.equal(sizeM.planningStock, 11);
+    assert.equal(sizeM.suggested, 7);
   });
 
   it("pedido cancelado não entra na velocidade", () => {
-    const snapshot = buildDemoSnapshot(now);
+    const snapshot = stockSnapshot(now, [
+      { barcode: "100", size: "M", stock: 1, sold: 18, cancelled: 1 },
+    ]);
     const cancelled = snapshot.sales.filter(
-      (sale) =>
-        sale.barcode === DEMO_BARCODES.vestidoAreiaM && sale.payment === "cancelado",
+      (sale) => sale.barcode === "100" && sale.payment === "cancelado",
     );
     assert.equal(cancelled.length, 1);
     const analysis = analyze({
@@ -88,10 +91,8 @@ describe("reposição", () => {
       coverTarget: 30,
       now,
     });
-    const vestidoM = analysis.variants.find(
-      (variant) => variant.barcode === DEMO_BARCODES.vestidoAreiaM,
-    );
-    assert.equal(vestidoM?.unitsSold, 18);
+    const sizeM = analysis.variants.find((variant) => variant.barcode === "100");
+    assert.equal(sizeM?.unitsSold, 18);
   });
 });
 
@@ -141,6 +142,54 @@ describe("cruzamento", () => {
     });
     assert.equal(inactive.length, 0);
   });
+
+  it("lê a grade oficial do Hiper e ignora variação inativa", () => {
+    const rows = normalizeHiperProduct({
+      id: "parent",
+      nome: "Vestido",
+      categoria: "Vestidos",
+      marca: "LUNIE",
+      ativo: true,
+      removido: false,
+      preco: 790,
+      variacao: [
+        {
+          id: "a",
+          codigoDeBarras: "789",
+          tipoVariacaoA: "Tamanhos",
+          nomeVariacaoA: "M",
+          tipoVariacaoB: "Cores",
+          nomeVariacaoB: "Areia",
+          quantidadeEmEstoque: 2,
+          quantidadeMinimaEmEstoque: 1,
+          variacaoAtiva: true,
+        },
+        {
+          id: "b",
+          codigoDeBarras: "790",
+          tipoVariacaoA: "Tamanhos",
+          nomeVariacaoA: "P",
+          quantidadeEmEstoque: 9,
+          variacaoAtiva: false,
+        },
+      ],
+    });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.barcode, "789");
+    assert.equal(rows[0]?.size, "M");
+    assert.equal(rows[0]?.color, "Areia");
+    assert.equal(rows[0]?.stock, 2);
+    assert.equal(rows[0]?.minStock, 1);
+    assert.equal(rows[0]?.price, 790);
+    const removed = normalizeHiperProduct({
+      id: "x",
+      nome: "Fora",
+      ativo: false,
+      codigoDeBarras: "1",
+      quantidadeEmEstoque: 3,
+    });
+    assert.equal(removed.length, 0);
+  });
 });
 
 describe("pedidos da Nuvemshop", () => {
@@ -175,6 +224,82 @@ describe("pedidos da Nuvemshop", () => {
     assert.equal(sales[0]?.orderId, "501");
   });
 });
+
+function stockSnapshot(
+  now: Date,
+  rows: {
+    barcode: string;
+    size: string;
+    stock: number;
+    sold: number;
+    cancelled?: number;
+  }[],
+): Snapshot {
+  const product: Product = {
+    id: "peca",
+    name: "Peça",
+    category: "Vestidos",
+    brand: "LUNIE",
+    variants: rows.map((row) => ({
+      id: row.barcode,
+      productId: "peca",
+      productName: "Peça",
+      category: "Vestidos",
+      brand: "LUNIE",
+      barcode: row.barcode,
+      size: row.size,
+      color: "Areia",
+      price: 100,
+      minStock: 2,
+      hiperStock: row.stock,
+      nuvemshopStock: row.stock,
+      onHiper: true,
+      onNuvemshop: true,
+      hiperProductId: "h",
+      nuvemshopProductId: "n",
+    })),
+  };
+  const sales: SaleLine[] = [];
+  let sequence = 1;
+  for (const row of rows) {
+    for (let index = 0; index < row.sold; index += 1) {
+      sales.push(saleLine(sequence, row, now, (index % 6) + 1, "pago"));
+      sequence += 1;
+    }
+    for (let index = 0; index < (row.cancelled ?? 0); index += 1) {
+      sales.push(saleLine(sequence, row, now, 2, "cancelado"));
+      sequence += 1;
+    }
+  }
+  return {
+    mode: "live",
+    syncedAt: now.toISOString(),
+    products: [product],
+    sales,
+    warnings: [],
+  };
+}
+
+function saleLine(
+  sequence: number,
+  row: { barcode: string; size: string },
+  now: Date,
+  daysAgo: number,
+  payment: PaymentState,
+): SaleLine {
+  return {
+    id: `venda-${sequence}`,
+    orderId: String(sequence),
+    createdAt: new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000).toISOString(),
+    barcode: row.barcode,
+    productName: "Peça",
+    size: row.size,
+    color: "Areia",
+    quantity: 1,
+    unitPrice: 100,
+    payment,
+  };
+}
 
 function variant(
   source: SourceVariant["source"],

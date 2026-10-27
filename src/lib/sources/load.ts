@@ -1,4 +1,3 @@
-import { buildDemoSnapshot } from "@/lib/demo";
 import { buildSnapshot } from "@/lib/merge";
 import { fetchHiperVariants } from "@/lib/sources/hiper";
 import { fetchNuvemshopSales, fetchNuvemshopVariants } from "@/lib/sources/nuvemshop";
@@ -10,7 +9,9 @@ export async function pullSnapshot(
   now: Date,
 ): Promise<Snapshot> {
   if (!credentials.hiperReady && !credentials.nuvemshopReady) {
-    return buildDemoSnapshot(now);
+    throw new Error(
+      "Nenhuma fonte conectada. Informe a chave do Hiper ou o access token da Nuvemshop.",
+    );
   }
   const since = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000);
   const notes: string[] = [];

@@ -27,7 +27,7 @@ type MutableVariant = {
 };
 
 export function buildSnapshot(input: {
-  mode: "demo" | "live";
+  mode: "live";
   syncedAt: string;
   hiper: SourceVariant[];
   nuvemshop: SourceVariant[];
@@ -80,7 +80,7 @@ function absorb(
   warnings: string[],
 ): void {
   const seen = new Set<string>();
-  const repeated = new Map<string, number>();
+  const repeated = new Map<SourceVariant["source"], number>();
   for (const row of rows) {
     const barcode = row.barcode.trim();
     if (!barcode) {

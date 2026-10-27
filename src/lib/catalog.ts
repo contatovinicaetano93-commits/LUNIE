@@ -1,12 +1,11 @@
 import { cache } from "react";
 import { connection } from "next/server";
 
-import { buildDemoSnapshot } from "@/lib/demo";
-import { readCredentials } from "@/lib/credentials";
+import { readCredentials, type Credentials } from "@/lib/credentials";
 import { readStore } from "@/lib/store";
 import type { CatalogVariant, DataMode, ManualMovement, Snapshot } from "@/lib/types";
 
-export type WorkspaceStatus = "demo" | "live" | "awaiting-sync";
+export type WorkspaceStatus = "live" | "awaiting-sync";
 
 export type VariantOption = {
   barcode: string;
@@ -28,44 +27,18 @@ export const getWorkspace = cache(async function getWorkspace(): Promise<Workspa
   const store = await readStore();
   const now = new Date();
 
-  if (credentials.hiperReady || credentials.nuvemshopReady) {
-    if (store.snapshot?.mode === "live") {
-      return assemble("live", "live", store.snapshot, store.movements, [
-        ...store.snapshot.warnings,
-      ]);
-    }
-    if (credentials.complete) {
-      const snapshot = emptyLiveSnapshot(now);
-      return assemble(
-        "live",
-        "awaiting-sync",
-        snapshot,
-        store.movements,
-        [
-          ...snapshot.warnings,
-          "As chaves estão no ambiente. Sincronize para trazer produtos do Hiper e pedidos da Nuvemshop.",
-        ],
-      );
-    }
-    const snapshot = buildDemoSnapshot(now);
-    const notices = [
-      "Demonstração. A amostra continua até a sincronização gravar uma leitura ao vivo.",
-    ];
-    if (credentials.hiperReady && !credentials.nuvemshopReady) {
-      notices.push(
-        "A chave do Hiper está no ambiente. A Nuvemshop ainda precisa do access token da loja: o ID e o segredo do aplicativo não autorizam a leitura dos pedidos.",
-      );
-    } else if (!credentials.hiperReady) {
-      notices.push("Falta a chave do Hiper. Enquanto isso o saldo do ERP não entra.");
-    }
-    return assemble("demo", "demo", snapshot, store.movements, notices);
+  const live = store.snapshot?.mode === "live" ? store.snapshot : null;
+  if (live && live.products.length > 0) {
+    return assemble("live", "live", live, store.movements, [...live.warnings]);
   }
 
-  const snapshot = buildDemoSnapshot(now);
-  const notices = [
-    "Demonstração. Os números são uma amostra da operação LUNIE até a chave do Hiper e o token da Nuvemshop entrarem no ambiente.",
-  ];
-  return assemble("demo", "demo", snapshot, store.movements, notices);
+  return assemble(
+    "live",
+    "awaiting-sync",
+    emptyLiveSnapshot(now),
+    store.movements,
+    waitingNotices(credentials),
+  );
 });
 
 function assemble(
@@ -103,6 +76,27 @@ function optionsFrom(snapshot: Snapshot): VariantOption[] {
 
 function optionLabel(variant: CatalogVariant): string {
   return `${variant.productName} · ${variant.color} · ${variant.size} · ${variant.barcode}`;
+}
+
+function waitingNotices(credentials: Credentials): string[] {
+  if (credentials.hiperReady && credentials.nuvemshopReady) {
+    return [
+      "As chaves estão no ambiente. Sincronize para trazer produtos do Hiper e pedidos da Nuvemshop.",
+    ];
+  }
+  if (credentials.hiperReady) {
+    return [
+      "A chave do Hiper está no ambiente. Sincronize para trazer o catálogo. A Nuvemshop ainda precisa do access token da loja.",
+    ];
+  }
+  if (credentials.nuvemshopReady) {
+    return [
+      "O token da Nuvemshop está no ambiente. Falta a chave do Hiper. Sincronize para trazer os pedidos da loja.",
+    ];
+  }
+  return [
+    "Nenhuma fonte conectada. Coloque a chave do Hiper ou o access token da Nuvemshop e sincronize.",
+  ];
 }
 
 function emptyLiveSnapshot(now: Date): Snapshot {

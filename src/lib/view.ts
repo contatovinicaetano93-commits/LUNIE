@@ -7,16 +7,12 @@ export async function loadView(
 ): Promise<{ workspace: Workspace; filters: ViewFilters; analysis: Analysis }> {
   const workspace = await getWorkspace();
   const filters = parseFilters(params);
-  const now =
-    workspace.snapshot.mode === "demo"
-      ? new Date(workspace.snapshot.syncedAt)
-      : new Date();
   const analysis = analyze({
     snapshot: workspace.snapshot,
     movements: workspace.movements,
     windowDays: filters.windowDays,
     coverTarget: filters.coverTarget,
-    now,
+    now: new Date(),
   });
   return { workspace, filters, analysis };
 }

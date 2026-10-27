@@ -1,4 +1,4 @@
-export type DataMode = "demo" | "live";
+export type DataMode = "live";
 
 export type PaymentState = "pago" | "cancelado" | "pendente";
 

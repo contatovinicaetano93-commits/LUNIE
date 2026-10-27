@@ -1,11 +1,12 @@
 export type Credentials = {
   hiperKey: string;
   hiperBaseUrl: string;
-  hiperProductsPath: string;
   nuvemshopToken: string;
   nuvemshopStoreId: string;
   nuvemshopVersion: string;
   nuvemshopUserAgent: string;
+  hiperReady: boolean;
+  nuvemshopReady: boolean;
   complete: boolean;
   missing: string[];
 };
@@ -22,15 +23,18 @@ export function readCredentials(): Credentials {
   if (!hiperKey) missing.push("HIPER_API_KEY");
   if (!nuvemshopToken) missing.push("NUVEMSHOP_ACCESS_TOKEN");
   if (!nuvemshopStoreId) missing.push("NUVEMSHOP_STORE_ID");
+  const hiperReady = hiperKey.length > 0;
+  const nuvemshopReady = nuvemshopToken.length > 0 && nuvemshopStoreId.length > 0;
   return {
     hiperKey,
-    hiperBaseUrl: readEnv("HIPER_API_BASE_URL") || "https://ecommerce.hiper.com.br",
-    hiperProductsPath: readEnv("HIPER_PRODUCTS_PATH") || "/api/produtos",
+    hiperBaseUrl: readEnv("HIPER_API_BASE_URL") || "https://ms-ecommerce.hiper.com.br",
     nuvemshopToken,
     nuvemshopStoreId,
     nuvemshopVersion: readEnv("NUVEMSHOP_API_VERSION") || "2025-03",
     nuvemshopUserAgent:
       readEnv("NUVEMSHOP_USER_AGENT") || "LUNIE (estoque@lunie.local)",
+    hiperReady,
+    nuvemshopReady,
     complete: missing.length === 0,
     missing,
   };

@@ -141,6 +141,54 @@ describe("cruzamento", () => {
     });
     assert.equal(inactive.length, 0);
   });
+
+  it("lê a grade oficial do Hiper e ignora variação inativa", () => {
+    const rows = normalizeHiperProduct({
+      id: "parent",
+      nome: "Vestido",
+      categoria: "Vestidos",
+      marca: "LUNIE",
+      ativo: true,
+      removido: false,
+      preco: 790,
+      variacao: [
+        {
+          id: "a",
+          codigoDeBarras: "789",
+          tipoVariacaoA: "Tamanhos",
+          nomeVariacaoA: "M",
+          tipoVariacaoB: "Cores",
+          nomeVariacaoB: "Areia",
+          quantidadeEmEstoque: 2,
+          quantidadeMinimaEmEstoque: 1,
+          variacaoAtiva: true,
+        },
+        {
+          id: "b",
+          codigoDeBarras: "790",
+          tipoVariacaoA: "Tamanhos",
+          nomeVariacaoA: "P",
+          quantidadeEmEstoque: 9,
+          variacaoAtiva: false,
+        },
+      ],
+    });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.barcode, "789");
+    assert.equal(rows[0]?.size, "M");
+    assert.equal(rows[0]?.color, "Areia");
+    assert.equal(rows[0]?.stock, 2);
+    assert.equal(rows[0]?.minStock, 1);
+    assert.equal(rows[0]?.price, 790);
+    const removed = normalizeHiperProduct({
+      id: "x",
+      nome: "Fora",
+      ativo: false,
+      codigoDeBarras: "1",
+      quantidadeEmEstoque: 3,
+    });
+    assert.equal(removed.length, 0);
+  });
 });
 
 describe("pedidos da Nuvemshop", () => {

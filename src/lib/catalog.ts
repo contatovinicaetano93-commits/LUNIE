@@ -28,29 +28,43 @@ export const getWorkspace = cache(async function getWorkspace(): Promise<Workspa
   const store = await readStore();
   const now = new Date();
 
-  if (credentials.complete) {
-    const snapshot =
-      store.snapshot?.mode === "live" ? store.snapshot : emptyLiveSnapshot(now);
+  if (credentials.hiperReady || credentials.nuvemshopReady) {
+    if (store.snapshot?.mode === "live") {
+      return assemble("live", "live", store.snapshot, store.movements, [
+        ...store.snapshot.warnings,
+      ]);
+    }
+    if (credentials.complete) {
+      const snapshot = emptyLiveSnapshot(now);
+      return assemble(
+        "live",
+        "awaiting-sync",
+        snapshot,
+        store.movements,
+        [
+          ...snapshot.warnings,
+          "As chaves estão no ambiente. Sincronize para trazer produtos do Hiper e pedidos da Nuvemshop.",
+        ],
+      );
+    }
+    const snapshot = buildDemoSnapshot(now);
     const notices = [
-      ...snapshot.warnings,
-      ...(store.snapshot?.mode === "live"
-        ? []
-        : [
-            "As chaves estão no ambiente. Sincronize para trazer produtos do Hiper e pedidos da Nuvemshop.",
-          ]),
+      "Demonstração. A amostra continua até a sincronização gravar uma leitura ao vivo.",
     ];
-    return assemble("live", snapshot.products.length === 0 && store.snapshot?.mode !== "live" ? "awaiting-sync" : "live", snapshot, store.movements, notices);
+    if (credentials.hiperReady && !credentials.nuvemshopReady) {
+      notices.push(
+        "A chave do Hiper está no ambiente. A Nuvemshop ainda precisa do access token da loja: o ID e o segredo do aplicativo não autorizam a leitura dos pedidos.",
+      );
+    } else if (!credentials.hiperReady) {
+      notices.push("Falta a chave do Hiper. Enquanto isso o saldo do ERP não entra.");
+    }
+    return assemble("demo", "demo", snapshot, store.movements, notices);
   }
 
   const snapshot = buildDemoSnapshot(now);
   const notices = [
     "Demonstração. Os números são uma amostra da operação LUNIE até a chave do Hiper e o token da Nuvemshop entrarem no ambiente.",
   ];
-  if (credentials.missing.length > 0 && credentials.missing.length < 3) {
-    notices.push(
-      `Falta configurar ${credentials.missing.join(", ")}. Enquanto isso o painel continua na amostra.`,
-    );
-  }
   return assemble("demo", "demo", snapshot, store.movements, notices);
 });
 

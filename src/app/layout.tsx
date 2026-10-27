@@ -25,6 +25,8 @@ const bodoni = Bodoni_Moda({
   weight: ["400", "500"],
 });
 
+export const maxDuration = 60;
+
 export const metadata: Metadata = {
   title: {
     default: "LUNIE",

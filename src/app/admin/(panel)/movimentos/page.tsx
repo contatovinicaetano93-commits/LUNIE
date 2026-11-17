@@ -42,7 +42,10 @@ export default async function MovimentosPage({
       />
       <div className="mb-4 flex flex-wrap gap-2">
         {FILTERS.map((filter) => {
-          const href = filter === "todos" ? "/movimentos" : `/movimentos?tipo=${filter}`;
+          const href =
+            filter === "todos"
+              ? "/admin/movimentos"
+              : `/admin/movimentos?tipo=${filter}`;
           return (
             <Link
               key={filter}

@@ -6,12 +6,12 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
-  { href: "/", label: "Visão" },
-  { href: "/estoque", label: "Estoque" },
-  { href: "/movimentos", label: "Movimentos" },
-  { href: "/mais-vendidos", label: "Mais vendidos" },
-  { href: "/reposicao", label: "Reposição" },
-  { href: "/insights", label: "Insights" },
+  { href: "/admin", label: "Visão" },
+  { href: "/admin/estoque", label: "Estoque" },
+  { href: "/admin/movimentos", label: "Movimentos" },
+  { href: "/admin/mais-vendidos", label: "Mais vendidos" },
+  { href: "/admin/reposicao", label: "Reposição" },
+  { href: "/admin/insights", label: "Insights" },
 ] as const;
 
 export function NavLinks() {

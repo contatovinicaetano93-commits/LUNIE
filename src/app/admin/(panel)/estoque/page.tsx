@@ -43,7 +43,7 @@ export default async function EstoquePage({
         />
       ) : (
         <>
-          <form action="/estoque" className="mb-4 flex flex-col gap-3 sm:flex-row">
+          <form action="/admin/estoque" className="mb-4 flex flex-col gap-3 sm:flex-row">
             <input type="hidden" name="situacao" value={filters.situation} />
             <Input
               name="q"
@@ -60,7 +60,10 @@ export default async function EstoquePage({
               const search = new URLSearchParams();
               if (filters.query) search.set("q", filters.query);
               if (situation !== "todos") search.set("situacao", situation);
-              const href = search.size > 0 ? `/estoque?${search.toString()}` : "/estoque";
+              const href =
+                search.size > 0
+                  ? `/admin/estoque?${search.toString()}`
+                  : "/admin/estoque";
               return (
                 <Link
                   key={situation}

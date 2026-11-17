@@ -381,7 +381,7 @@ function buildInsights(variants: VariantView[], windowDays: WindowDays): Insight
         severity: variant.planningStock === 0 || (variant.coverDays ?? 99) < 3 ? "alta" : "media",
         title: `${variant.productName} ${variant.color} ${variant.size} perto da ruptura`,
         detail: `${pecas(variant.planningStock)} no saldo de planejamento, ${vendas(variant.unitsSold)} em ${windowDays} dias, ${cover}.`,
-        href: `/estoque?q=${encodeURIComponent(variant.barcode || variant.productName)}`,
+        href: `/admin/estoque?q=${encodeURIComponent(variant.barcode || variant.productName)}`,
       });
     }
     if (variant.planningStock >= 8 && variant.unitsSold === 0 && variant.barcode) {
@@ -391,7 +391,7 @@ function buildInsights(variants: VariantView[], windowDays: WindowDays): Insight
         severity: "media",
         title: `${variant.productName} ${variant.color} ${variant.size} parado`,
         detail: `${pecas(variant.planningStock)} e nenhuma venda em ${windowDays} dias.`,
-        href: `/estoque?q=${encodeURIComponent(variant.barcode)}`,
+        href: `/admin/estoque?q=${encodeURIComponent(variant.barcode)}`,
       });
     }
     if (variant.divergence !== null && variant.divergence !== 0) {
@@ -401,7 +401,7 @@ function buildInsights(variants: VariantView[], windowDays: WindowDays): Insight
         severity: Math.abs(variant.divergence) >= 3 ? "alta" : "media",
         title: `Saldo diferente em ${variant.productName} ${variant.color} ${variant.size}`,
         detail: `Hiper ${stockText(variant.hiperStock)}, Nuvemshop ${stockText(variant.nuvemshopStock)}. Diferença de ${pecas(Math.abs(variant.divergence))}.`,
-        href: `/estoque?situacao=divergente&q=${encodeURIComponent(variant.barcode)}`,
+        href: `/admin/estoque?situacao=divergente&q=${encodeURIComponent(variant.barcode)}`,
       });
     }
     if (variant.pair === "somente-hiper" || variant.pair === "somente-nuvemshop" || variant.pair === "sem-codigo") {
@@ -411,7 +411,7 @@ function buildInsights(variants: VariantView[], windowDays: WindowDays): Insight
         severity: "media",
         title: unpairedTitle(variant),
         detail: unpairedDetail(variant),
-        href: `/estoque?situacao=sem-par&q=${encodeURIComponent(variant.barcode || variant.productName)}`,
+        href: `/admin/estoque?situacao=sem-par&q=${encodeURIComponent(variant.barcode || variant.productName)}`,
       });
     }
   }
@@ -443,7 +443,7 @@ function buildInsights(variants: VariantView[], windowDays: WindowDays): Insight
       severity: "alta",
       title: `Grade torta em ${fast.productName} ${fast.color}`,
       detail: `${fast.size} tem ${pecas(fast.planningStock)} e ${vendas(fast.unitsSold)} em ${windowDays} dias. ${slow.size} tem ${pecas(slow.planningStock)} e ${vendas(slow.unitsSold)}.`,
-      href: `/reposicao?q=${encodeURIComponent(fast.productName)}`,
+      href: `/admin/reposicao?q=${encodeURIComponent(fast.productName)}`,
     });
   }
 

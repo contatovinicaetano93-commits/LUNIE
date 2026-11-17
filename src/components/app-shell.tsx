@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { LunieMark } from "@/components/lunie-mark";
+import { LogoutButton } from "@/components/logout-button";
 import { Badge } from "@/components/ui/badge";
 import { MovementDialog } from "@/components/movement-dialog";
 import { NavLinks } from "@/components/nav-links";
@@ -37,6 +38,7 @@ export function AppShell({
               </span>
               <SyncButton />
               <MovementDialog options={workspace.variantOptions} />
+              <LogoutButton />
             </div>
           </div>
           <NavLinks />

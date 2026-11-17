@@ -1,6 +1,6 @@
 # LUNIE
 
-Painel interno de estoque e reposição. Lê produtos e saldo no Hiper, produtos e pedidos na Nuvemshop, e cruza os dois pelo código de barras.
+Loja pública na raiz e painel interno de estoque em `/admin`. O painel lê produtos e saldo no Hiper, produtos e pedidos na Nuvemshop, e cruza os dois pelo código de barras.
 
 O painel só mostra o que veio do Hiper ou da Nuvemshop. Sem uma leitura sincronizada, as telas ficam vazias. O painel não grava saldo de volta no Hiper nem na Nuvemshop.
 
@@ -11,11 +11,11 @@ npm install
 npm run dev
 ```
 
-O painel sobe em [http://127.0.0.1:43123](http://127.0.0.1:43123).
+A landing sobe em [http://127.0.0.1:43123](http://127.0.0.1:43123). O admin fica em `/admin` (login em `/admin/login`).
 
 ## Chaves
 
-Copie `.env.example` para `.env.local`. Não coloque senha de usuário em lugar nenhum.
+Copie `.env.example` para `.env.local`. Defina `ADMIN_EMAIL`, `ADMIN_PASSWORD` e `ADMIN_SESSION_SECRET` para o login do painel.
 
 - **Hiper:** chave de segurança em Vendas, Loja virtual, Configurações, com a integração do tipo Personalizada. A conta precisa do Pacote do varejo digital, e o produto precisa estar marcado para a loja virtual.
 - **Nuvemshop:** `access_token` e `store_id` (`user_id`) devolvidos ao instalar o app na loja, com os escopos `read_products` e `read_orders`. O ID e o segredo do aplicativo só servem para trocar o código de instalação por esse token.

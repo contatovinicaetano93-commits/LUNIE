@@ -23,11 +23,11 @@ export default async function AdminLoginPage({
       : "/admin";
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-[linear-gradient(160deg,#14110f_0%,#2a221c_48%,#1a1613_100%)] px-4 py-16 text-[#f4efe8]">
+    <div className="flex min-h-full items-center justify-center bg-[linear-gradient(160deg,#e9ddce_0%,#cbb49b_48%,#a77d5d_100%)] px-4 py-16 text-[#664637]">
       <div className="w-full max-w-md">
         <div className="mb-10 flex flex-col items-center text-center">
-          <LunieMark className="bg-[#f4efe8]" />
-          <p className="mt-4 text-xs tracking-[0.35em] uppercase text-[#f4efe8]/70">
+          <LunieMark className="bg-[#664637]" />
+          <p className="mt-4 text-xs tracking-[0.35em] text-[#664637]/70 uppercase">
             Área administrativa
           </p>
         </div>

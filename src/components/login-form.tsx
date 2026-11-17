@@ -15,11 +15,11 @@ export function LoginForm({ next }: { next: string }) {
   return (
     <form
       action={formAction}
-      className="space-y-5 rounded-sm border border-white/15 bg-black/25 p-6 backdrop-blur-sm"
+      className="space-y-5 border border-[#967565]/35 bg-[#e9ddce]/80 p-6 backdrop-blur-sm"
     >
       <input type="hidden" name="next" value={next} />
       <div className="space-y-2">
-        <Label htmlFor="email" className="text-[#f4efe8]/80">
+        <Label htmlFor="email" className="text-[#664637]/80">
           E-mail
         </Label>
         <Input
@@ -28,12 +28,12 @@ export function LoginForm({ next }: { next: string }) {
           type="email"
           autoComplete="username"
           required
-          className="border-white/20 bg-black/30 text-[#f4efe8] placeholder:text-white/35"
+          className="border-[#cbb49b] bg-[#f3ebe0] text-[#664637] placeholder:text-[#967565]/60"
           placeholder="seu@email.com"
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password" className="text-[#f4efe8]/80">
+        <Label htmlFor="password" className="text-[#664637]/80">
           Senha
         </Label>
         <Input
@@ -42,18 +42,18 @@ export function LoginForm({ next }: { next: string }) {
           type="password"
           autoComplete="current-password"
           required
-          className="border-white/20 bg-black/30 text-[#f4efe8] placeholder:text-white/35"
+          className="border-[#cbb49b] bg-[#f3ebe0] text-[#664637]"
         />
       </div>
       {state.error ? (
-        <p className="text-sm text-[#e8b4a0]" role="alert">
+        <p className="text-sm text-[#b76d50]" role="alert">
           {state.error}
         </p>
       ) : null}
       <Button
         type="submit"
         disabled={pending}
-        className="w-full rounded-none bg-[#f4efe8] text-[#1a1613] hover:bg-white"
+        className="w-full rounded-none bg-[#664637] text-[#e9ddce] hover:bg-[#b76d50]"
       >
         {pending ? "Entrando..." : "Entrar"}
       </Button>

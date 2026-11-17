@@ -7,12 +7,12 @@ import { SiteHeader } from "@/components/landing/site-header";
 
 export default function HomePage() {
   return (
-    <div className="landing min-h-full bg-[#0c0a09] text-[var(--landing-ivory)]">
+    <div className="landing min-h-full bg-[var(--landing-sand)] text-[var(--landing-espresso)]">
       <SiteHeader />
       <main>
         <LandingHero />
-        <LandingCollections />
         <LandingLooks />
+        <LandingCollections />
         <LandingInvite />
       </main>
       <SiteFooter />

@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     template: "%s · LUNIE",
   },
   description:
-    "LUNIE — moda para ocasiões. Peças com presença, corte preciso e atitude.",
+    "LUNIE — moda artesanal e de ocasião. Vestidos, handmade e conjuntos.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

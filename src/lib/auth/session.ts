@@ -8,11 +8,13 @@ export type SessionPayload = {
 };
 
 function sessionSecret(): string {
-  return (
+  const secret =
     process.env.ADMIN_SESSION_SECRET?.trim() ||
-    process.env.SESSION_PASSWORD?.trim() ||
-    "lunie-admin-dev-secret-change-me"
-  );
+    process.env.SESSION_PASSWORD?.trim();
+  if (!secret) {
+    throw new Error("ADMIN_SESSION_SECRET não configurado.");
+  }
+  return secret;
 }
 
 export function adminEmail(): string {
